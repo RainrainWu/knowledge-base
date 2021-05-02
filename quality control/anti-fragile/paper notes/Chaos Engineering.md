@@ -54,6 +54,31 @@ do not fully characterize the behavior of the system for all possible inputs.
   - Automate experiments to run continuously
 
 ### Build a hypothesis around steady state behavior
+- "works properly" is too vague as a basis for designing experiments.
+  - the quality attribute we focus on most is availability
+  - even if one of the internal services fails, this does not necessarily have an impact on overall system availability.
+- use fallbacks to ensure graceful degradation: that failures in non­critical services
+have a minimal impact on the user experience.
+  - if there is a failure in the caching service, then service A can fall back to making a request directly against service B.
+  - provide personalized content, where the fallback would be to present a reasonable default.
+- Ultimately, what we care about is: "Are users able to find some content to watch, and
+successfully watch that content?"
+  - operationalize this concept by observing how many users start streaming a video each second.
+  - metric SPS, for (stream) starts per second.
+
+#### Metrics SPS
+-  primary indicator of the overall health of the system
+-  fundamental assumptions is that complex systems exhibit behaviors that are regular enough that they can be predicted.
+  - SPS metric varies slowly and predictably over the course of a day
+  - If engineers observe an unexpected change in SPS, we know there is a problem with the system.
+- a good example of a metric that characterizes the steady-state behavior of the system
+- a strong, obvious link between these metrics and the availability of the system
+  - hypothesize that failing over from one region to another will have minimal impact on SPS.
+  - not focus on finer grain metrics such as CPU load ot query time 
+  - steady state characterizations that are visible at the boundary of the system, which directly capture an interaction between the users and the system.
+  - conclude an experiment early if fine-grained metrics indicate that the system is not functioning correctly, even though SPS has not been impacted.
+
+
 ### Vary real‐world events
 ### Run experiments in production
 ### Automate experiments to run continuously
