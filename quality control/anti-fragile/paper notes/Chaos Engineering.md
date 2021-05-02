@@ -78,7 +78,27 @@ successfully watch that content?"
   - steady state characterizations that are visible at the boundary of the system, which directly capture an interaction between the users and the system.
   - conclude an experiment early if fine-grained metrics indicate that the system is not functioning correctly, even though SPS has not been impacted.
 
-
 ### Vary real‐world events
+- corner cases and error conditions will happen out in the real world, even if they don't happen in our test cases
+  - Clients send malformed requests
+  - third party services we consume send malformed responses
+  - hard disks fill up
+  - memory is exhausted
+- 92% of catastrophic system failures were the result of incorrect handling of non­fatal errors
+  - look at historical data to see what type of inputs were involved in previous system outages
+  - any input which you think could potentially disrupt the steady­state behavior of the system is a good candidate for an experiment.
+    - terminate virtual machine instances
+    - inject latency into requests between services
+    - fail requests between services
+    - fail an internal service
+    - make an entire Amazon region unavailable
+    - the rate of requests received by a service
+- may need to simulate the event instead of inject it
+- use their judgment to make trade-offs between the realism of the events and the potential risk of harm to the system.
+  - production financial trading system
+- selectively apply the event to a subset of users
+  - make an internal Netflix service behave as if it is unavailable from the point of view of some users, but for others the service appears to function properly
+
+
 ### Run experiments in production
 ### Automate experiments to run continuously
