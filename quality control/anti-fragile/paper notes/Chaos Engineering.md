@@ -99,6 +99,34 @@ successfully watch that content?"
 - selectively apply the event to a subset of users
   - make an internal Netflix service behave as if it is unavailable from the point of view of some users, but for others the service appears to function properly
 
-
 ### Run experiments in production
+- traditional software testing approaches are not sufficient for identifying the potential failures of distributed systems
+  - A server is overloaded, and takes an increasing amount of time to respond to requests. One of the clients places outbound requests on an unbounded local queue. Over time, the queue consumes more and more memory, causing the client to fail.
+  - A client makes a request to a service that is fronted by a cache. The service returns a transient error which is incorrectly cached. When other clients make the same request, they are served an error response from the cache
+- not possible to fully reproduce the entire architecture and run an E2E test.
+
 ### Automate experiments to run continuously
+- System changes continuously over time.
+  - confidence in the results of past experiments decreases over time.
+- the experiments will ultimately need to be automated in order to ensure that they run over and over again as the system evolves
+
+## Running a Chaos experiment
+- Based on the principles, define an experiment:
+  - Start by defining ‘steady state’ as some measurable output of a system that indicates normal behavior.
+  - Hypothesize that this steady state will continue in both the control group and the experimental group.
+  - Introduce variables that reflect real world events like servers that crash, hard drives that malfunction, network connections that are severed.
+  - Try to disprove the hypothesis by looking for a difference in steady state between the control group and the experimental group.
+
+## The Future of Chaos Engineering
+- the increasing complexity of software systems will continue to drive the need for empirical approaches to achieving system availability.
+
+### Move Forward
+- Case studies from other domains
+  - hope that more organizations will document how they are applying Chaos Engineering to demonstrate that these techniques are not unique to Netflix.
+- Adoption
+  - What approaches are successful for getting an organization to buy into this approach, and for getting engineering teams within the organization to adopt it?
+- Tooling
+  - build a set of tools for running these types of experiments that are reusable across organizations
+- Event injection models
+  - Research shows that many failures are triggered by combinations of events rather than single events
+  - How do we decide what set of experiments to run?
