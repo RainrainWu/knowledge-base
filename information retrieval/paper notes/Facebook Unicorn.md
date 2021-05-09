@@ -79,3 +79,19 @@
   - By partitioning ids by vertical, verticals can be replicated as necessary to serve the query load specific to that entity type.
 
 ## GRAPH SEARCH
+- There are interesting graph results that are more than one edge away from the source nodes.
+  - Requires supporting queries that take more than one round-trip between the index server and the top-aggregator.
+  - Take a pre-specified edge-type from the client and combine it with result ids from a round of execution to generate and execute a new query.
+- Build a general-purpose, online system for users to find entities in the social graph that matched a set of user-defined constraints.
+
+### Apply
+- Allows clients to query for a set of ids and then use those ids to construct and execute a new query.
+  - The network latency saved by doing extra processing within the Unicorn cluster itself.
+  - The ability write the aggregation and processing of the extra steps in a high performance language.
+- Think of Apply as analogous to Join because it can leverage aggregate data and metadata to execute queries more efficiently than clients themselves.
+
+#### Example: Friends-of-Friends
+- While each user has 130 friends on average, they have approximately 48000 friends-of-friends.
+  - Even assuming only 4 bytes per posting list entry, this would still take over 178TB to store the posting lists for 1 billion users, which would require hundreds of machines.
+  - Here, we only have terms for friend:. Given the same assumptions, this corpus would take up 484GB and would fit comfortably on a handful of machines.
+- Rank them by the number of terms that matched each result.
