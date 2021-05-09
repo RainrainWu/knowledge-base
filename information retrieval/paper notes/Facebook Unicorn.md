@@ -95,3 +95,36 @@
   - Even assuming only 4 bytes per posting list entry, this would still take over 178TB to store the posting lists for 1 billion users, which would require hundreds of machines.
   - Here, we only have terms for friend:. Given the same assumptions, this corpus would take up 484GB and would fit comfortably on a handful of machines.
 - Rank them by the number of terms that matched each result.
+
+#### Example: Restaurants
+- The inner query of the apply operator would have millions of results, which is too many to return to the top-aggregator.
+- Good inner result ranking solves the vast majority of truncation problems, although this is an area of active monitoring and development.
+
+### Extract
+- Created as a way to tackle a common use-case: Say a client wishes to look up “People tagged in photos of Jon Jones”.
+  - Billions of “one-to-few” mappings, it makes better sense to store the result ids in the forward index of the secondary vertical and do the lookup inline.
+
+## LINEAGE
+- Certain graph edges cannot be shown to all users but rather only to users who are friends with or in the same network as a particular person.
+  - Unicorn itself does not have privacy information incorporated into its index. 
+  - Give callers all the relevant data concerning how a particular result was generated in Unicorn so that the caller can make a proper privacy check on the result.
+- First, we did not want our system to provide the strict consistency and durability guarantees that would be needed for a full privacy solution.
+  -  If a user “un-friends” another user, the first user’s friends-only content immediately and irrevocably must become invisible to the second user.
+- Facebook has organically accumulated a massive set of complex, privacy-related business logic in its frontend.
+- A string of metadata is attached to each search result to describe its lineage.
+
+## HANDLING FAILURES AND SCALE
+- Sharding by id provides some degree of “passive” safety, since serving incomplete results for a term is strongly preferable to serving empty results.
+- Rack aggregators know how to forward requests to a shard copy in another rack in the event that a shard becomes unavailable.
+- It is possible to build a custom, smaller subset of a particular vertical to provide extra replication for these hot term families.
+
+## PERFORMANCE EVALUATION
+- Evaluated the query “People who like Computer Science”.
+  - There are over 6M likers of computer science on Facebook.
+- Next, we build an Apply on top of this base query by finding the friends of these individuals.
+  - How performance is affected as the inner truncation limit is increased from 10 to 100k.
+- Relative deviation increases gradually as the truncation limit increases.
+
+## RELATED WORK
+- Unicorn seeks to handle a finite number of well understood edges and scale to trillions of edges.
+- SPARQL engines intend to handle arbitrary graph structure and complex queries, and scale to tens of millions of edges. 
