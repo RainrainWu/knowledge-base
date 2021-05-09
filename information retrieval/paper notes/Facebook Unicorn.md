@@ -38,3 +38,44 @@
   - Find female friends of Jon Jones who are not friends of Lea Lin by using (difference (and friend:5 gender:1) friend:6).
 
 ## ARCHITECTURE
+- Client queries are sent to a Unicorn top-aggregator, which dispatches the query to one rack-aggregator per rack.
+  - The rack aggregators and top-aggregator are responsible for combining and truncating results from multiple index shards.
+- The posting lists are generally shorter, with the 50th and 99th percentiles within a representative shard being 3 and 59 hits.
+  -  Decoding speed is dominated by memory access time for very short posting lists, we get the greatest performance gains by optimizing for decoding the posting lists that consume more than a single CPU-cache line.
+
+### Building Indices
+- Built using the Hadoop framework.
+- The raw data comes from regular scrapes of our databases that contain the relevant table columns.
+- Many applications within Facebook require their data to be fresh with the latest up-to-the-minute updates to the social graph, we also support realtime updates.
+- For a given update-type, which is known as a category, each index server keeps track of the timestamp of the latest update it has received for that category.
+- When a new index server becomes available after a network partition or machine replacement, the scribe tailer can query the index server for its latest update timestamps for each category and then send it all missing mutations.
+
+## TYPEAHEAD
+- Typeahead enables Facebook users to find other users by typing the first few characters of the person’s name.
+- For example, if a user is typing in the name of “Jon Jones” the typeahead backend would sequentially receive queries for “J”, “Jo”, “Jon”, “Jon ”, “Jon J”, etc.
+
+### Social Relevance
+- One problem with the approach described above is that it makes no provision for social relevance.
+  - A query for “Jon” would not be likely to select people named “Jon” who are in the user’s circle of friends.
+
+#### WeakAnd
+- The WeakAnd operator is a modification of And that allows operands to be missing from some fraction of the results within an index shard.
+  - For these optional terms, clients can specify an optional count or optional weight that allows a term to be missing from a certain absolute number or fraction of results, respectively.
+  - If the optional count for a term is non-zero , then this term is not required to yield a particular hit, but the index server decrements the optional count for each such non-matching hit.
+  - Once the optional count for a particular term reaches zero, the term becomes a required term.
+
+#### StrongOr
+- A modification of Or that requires certain operands to be present in some fraction of the matches.
+  - Useful for enforcing diversity in a result set.
+
+#### Scoring
+- For storing per-entity metadata, Unicorn provides a forward index, which is simply a map of id to a blob that contains metadata for the id.
+- The forward index for an index shard only contains entries for the ids that reside on that shard.
+
+#### Additional Entities
+- Typeahead can also be used to search for other entitytypes in addition to people.
+  - Split into multiple entity-type specific tiers—or verticals—and modified the top-aggregator to query and combine results from multiple verticals.
+  - Edges of the same result-type are placed in the same vertical, so the posting lists for friend edges and likers edges reside in the same vertical since they both yield user ids.
+  - By partitioning ids by vertical, verticals can be replicated as necessary to serve the query load specific to that entity type.
+
+## GRAPH SEARCH
