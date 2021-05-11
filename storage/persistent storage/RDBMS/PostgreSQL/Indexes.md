@@ -62,4 +62,30 @@
 - Auto Increment 的 Primary Key 理論上沒有隨機性，大量 Create 時會導致操作集中在最右邊的 Leaf Page 而頻繁被 Block。
 - UUID 也是有可能 Conflict，只是機率很低而已。
 
-# Secondary Index
+# PostgreSQL 中常用的 Index
+- Postgres 有提供幾種實用的 Index 可供選擇，依據使用的情境選擇適合的 Index 對效能改善是非常重要的。
+- 寫筆記時的最新版本是 PostgreSQL 13，就以這版本來紀錄。
+
+## B-tree
+- 原理近似於平衡搜尋樹，可以用於排序，也支援大於、小於、等於的比較操作。
+- 結構上需要一個儲存 MetaData 的 meta page，以及作為搜尋樹根節點的 root page。
+- 隨著資料量增加一個 root page 可能不夠儲存，因而會向下分支出若干層 branch page 與葉節點的 leaf page。
+
+### 參考資料
+- [PostgreSQL 官方文件](https://www.postgresql.org/docs/current/btree-intro.html)
+- [深入浅出PostgreSQL B-Tree索引结构](https://github.com/digoal/blog/blob/master/201605/20160528_01.md?spm=a2c6h.12873639.0.0.45131bffpkfqz3&file=20160528_01.md)
+
+## GiST
+- 全名是 Generalized Search Tree，概念上也是平衡搜尋樹的一種，但在可接受的資料型別以及比較方法上有更多彈性，比如：
+  - 幾何圖形是否相交
+  - 經緯度座標上到市中心的距離由近至遠排序
+  - IP 位址是否在同個區段
+
+### 參考資料
+- [PostgreSQL 官方文件](https://www.postgresql.org/docs/current/gist-intro.html)
+- [PostgreSQL 百亿地理位置数据 近邻查询性能](https://github.com/digoal/blog/blob/master/201601/20160119_01.md?spm=a2c6h.12873639.0.0.45131bffpkfqz3&file=20160119_01.md)
+
+## hash
+## GIN
+## SP-GiST
+## BRIN
