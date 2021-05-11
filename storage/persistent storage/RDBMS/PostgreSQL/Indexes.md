@@ -1,8 +1,29 @@
 # 原理
 - 資料庫在執行 CRUD 等等常務性操作時，並不會考量日後各種資料被查詢的情境，因此每一筆記錄多半是依照統一的規則儲存的。
 - 而有時候特定的資料排列方式是能非常顯著的改善查找紀錄的效率的，比如透過二分搜索樹把時間複雜度從 O(n) 降低至接近 O(log n)，因此特意使用額外空間維護其結構便是一種可行的方法。
-- PostgreSQL 會自動以 Primary Key 來建立 B-Tree 實現 Heap Table，而使用者能自行決定額外加上的都是以儲存 Primary Key 為主的 Secondary Index。
+- PostgreSQL 會自動以 Primary Key 來建立 B+Tree 實現 Heap Table，而使用者能自行決定額外加上的都是以儲存 Primary Key 為主的 Secondary Index。
 - 但也因此使用 Index 時多半會有額外的物理儲存空間佔用，也因為每次更新資料也須同時更新 Index 所以會犧牲一些效率。
 - 儘管在時間複雜度上有所改善，建立 Index 與更新 Index 的時間成本仍是與資料量成正比的，需先妥善估計並規劃時程。
 
-## Heap Table v.s. Index-Organized Table
+# Index-Organized Table 和 Heap Table
+- 為了快速定位到目標資料，近代主流的 RDBMS 都會使用 B+Tree 來提升搜索速度。
+- B+Tree 的 Non-Leaf Page 主要是紀錄搜尋時的分支判斷，因為會被頻繁使用所以多半會一直待在 Cache 中。
+- 而 Index-Organized Table 和 Heap Table 和 的差異主要是在 Leaf node 所儲存的東西。
+
+## Index-Organized Table
+- 這個實現方式會直接把資料給存在 Leaf Page 中。
+<img width="868" alt="截圖 2021-05-11 下午3 39 46" src="https://user-images.githubusercontent.com/26277801/117777384-2104aa80-b26f-11eb-805e-fde596ddd648.png">
+
+### 優點
+- 所有的紀錄已經依照 Primary Key 的順序排好，省去 Sort by Primary Key 的時間。
+- 由於連續性的資料會連續的存放在一起，所以很適合做 Range Scan 相關的操作，比如一段時間內的營業分析報表。
+
+### 缺點
+- 所有 Create 新資料的操作都會集中在最右側的 Leaf Page 上，若是頻繁 Create 資料的情境容易頻繁被 Lock 拖慢效能。
+- 由於每個 Leaf Node 儲存空間有限，若是頻繁 Insert/Delete 的話可能需要不斷觸發 Split Node 和 Merge Node 來調整。
+- 為了維持資料基於 Primary Key 的順序，Split/Merge Node 會對資料移動其物理上的儲存位置，因此 Secondary Index 也只能儲存資料的 Primary Key 而不是物理位置。
+
+
+## Heap Table
+- 這個實現中 Leaf Page 會儲存資料的對應位置，不會直接儲存資料。
+<img width="925" alt="截圖 2021-05-11 下午4 13 34" src="https://user-images.githubusercontent.com/26277801/117782057-db96ac00-b273-11eb-87d2-9f30c0af2a8a.png">
