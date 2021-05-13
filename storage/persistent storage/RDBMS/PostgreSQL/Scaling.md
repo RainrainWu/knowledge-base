@@ -36,3 +36,4 @@
     - 若 cluster 中各節點有 master-slave 的階級差異時，往往只能有一個 master 的關鍵節點，存在兩個以上時就可能導致邏輯不一致的問題。
     - 當 failover 機制意外觸發或執行不完全就可能發生，比如重大網路因素導致 heartbeat 慢了幾秒回覆，但原本的 primary instance 仍在運作卻觸發了 failover。
     - 當 pgpool-II 的 active node 無法連接當前 PostgreSQL cluster 的 primary instance 時，會徵求其餘的 pgpool-II 參與投票，以多數決來判斷是否該 PostgreSQL instance 真的掉線需要進行 failover，否則就轉移自身 active node 的資格給能夠連接 primary instance 的 pgpool-II 節點。
+    - 為了使投票結果更可靠，pgpool-II 的節點數建議為三個以上的奇數。
