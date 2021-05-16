@@ -3,7 +3,30 @@
 - 將資料保存在記憶體中以提昇操作效率。
 - 雖然記憶體中的資料是揮發性的，但 Redis 也可以支援定時 snapshot 寫入持久化儲存的備份功能。
 
-## 潛在問題
+## Clustering
+- 可以透過建立多個 redis 節點來組成 cluster，除了能分散儲存資料外，也能受益於 master-slave 備份機制對抗節點失效的風險。
+- 組成 cluster 中的每個 redis 節點都必須開啟兩個 port
+  - 一個對外接收 request 的 data port 預設是 6379
+  - 一個是節點之間互相溝通 (e.g. 更新設定值、確認失效節點) 的 cluster bus port，固定比前者 +10000，預設是 16379
+- redis 是透過把資料群分在總計 16384 個 slot 中儲存的，背後的 hash slot 演算法可幫助他盡可能地平均分散資料並降低遷移時的運算成本。
+  - 有多個節點時各個節點會負責管理一部份的 slot（至少一個），最大的叢集可有 16384 個節點，但官方建議最大值是 1000 個。
+  - 每個節點各自會維護一份 slot 與其儲存節點的 mapping 資訊，當收到請求中的 key 不屬於自身管理的 slot 時，會 redirect 至目標節點處理。
+  - 一般情況下一個 slot 的資料讀寫只由一個 master 來處理，而其他 slave 主要用來備份，若因高流量考量分彈讀取操作的話需考慮更新延遲的資料一致性問題。
+  - 同時可以透過 hash tag 的語法 `{TAG_NAME}KEY_NAME` 進一步強行把同個 hash tag 的 key-value pair 放在同個 slot 中，以加速 multiple key 的操作。
+
+### 新增節點流程
+> 由於 redis 儲存的資料是由各個 slot 分開獨立管理的，可自由搬動其所在節點，因此可隨時任意新增節點不影響運作。
+1. 啟動一個新的 redis 節點
+2. 透過 cluster add-node 的指令把新的節點加入現有的 cluster。
+3. 確認新節點已加入後，透過 cluster reshard 指令遷移部份 slot 到新的節點中，或者用 cluster rebalance 指令以權重分配 slot 數量。
+
+### 版本升級流程
+> 核心概念是用 rolling upgrade 以保證整個 cluster 對外的服務不中斷。
+1. 啟動和當前 master 數量相同的新版本 redis 節點，並加入 cluster 形成一對一的 slave 以複製資料。
+2. 資料複製完成後便可開始手動進行 failover 將 master 角色轉移至新版本，轉移時可能會有導致系統不穩風險，是系統對穩定度的要求和不統版本間組成 cluster 的相容性來決定要一次性全部 failover 還是逐個完成
+3. 新版本的 master 轉移完成後，逐步啟用新版本的節點作為 slave 加入 cluster，並逐步汰換舊版本的節點至全數更新為止。
+
+## 常見問題
 
 ### 空間限制
 - 資料庫所儲存的資料量肯定會比 cache 儲存的資料量大的多的，而若要受惠於 cache 的機制通常會先向資料庫取得資料後存入 cache 再回覆給使用者，久而久之 cache 的空間便會有耗盡的問題。
