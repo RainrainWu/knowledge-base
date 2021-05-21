@@ -68,4 +68,15 @@
 - 對於備份所在位置並不會永久儲存，而是會在 master 啟動、新的 chunkserver 節點加入或是新的 chunk 創建時詢問各個 chunkserver 所持有的 chunk 來更新資訊。
 
 ### In-Memory Data Structures
+- master node 的 metadata 主要是儲存在 RAM 內的，這允許他週期性的掃描所有資料也不會有太大負擔，同時也方便進行 garbage collection、metadata replication 等等。
+- 然而採用這方法的缺點正是叢集大小和節點數量會受限於 master node 的 RAM 空間，這問題可以透過 prefix compression 有效緩解，就算要增加更多 RAM 的成本也非常低。
 
+### Chunk Locations
+- master node 並不會儲存每個 chunk 的備份副本位置，但是可以透過 heartbeat 機制和控制每個 chunk 新創建的流程來持續保存最新資訊。
+- 作者提到最初他們也嘗試採用和前兩者一樣的 persistant storage 機制，但由於 chunkserver 發生改名、改設定檔的頻率不低，甚至發生單點錯誤導致下線或重啟，所以 polling 的方式有更高的可靠性。
+
+### Operation Log
+- 主要用途是留存對 metadata 更動的歷史紀錄，除了作為永久儲存的核心資料外，也是紀錄了併發操作先後順序的時間線。
+- 具體實現類似於近代 RDBMS 的 write-ahead log，同樣有累極多筆更動或是間隔固定時間再一次寫入 Disk 來減緩 IO 壓力的優化方式。
+- 同時也有 checkpoint 機制，在 log 體積超過一定限制後直接對所有歷史操作後的資料狀態進行儲存備份，並清空整理過的 log 以避免 log 無限制增長。
+  - 雖說建立 checkpoint 等級的備份需要時間，但這並不會影響到服務繼續對 operation log 寫入的功能。
