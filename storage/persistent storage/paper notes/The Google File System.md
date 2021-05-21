@@ -31,3 +31,10 @@
 新的 file system 提供的介面並沒有太大改變，仍是 create, delete, open, close 等等概念，但是新增了 snapshot 和 records append 兩種：
   - snapshot 可以以低成本的方式備份一個檔案或一整個資料夾路徑。
   - record append 可允許多個使用者或服務對同個檔案尾部併發寫入新資料，同時保障個別操作的原子性，這對於整合郭的來源的寫入操作至關重要。
+
+## Architecture
+- Google file system 的 cluster 由一個 master 和多個 chunkservers 組成，通常每個節點都是個執行在平價的 Linux Server 上的 user-level process。
+  - 每個檔案都會被切分為固定大小的 chunk，每個 chunk 在被創造時會由 master 配給一個 globally unique 的 64-bit id。
+  - 而為了可靠性考量，每個 chunk 會在多個 chunkservers 上存有備份版本，而 chunkservers 可以像對待 Linux file 一樣進行 read 和 write 操作
+  - master 節點主要負責管理整個叢集的 metadata，包含命名空間、存取權限、目前每個 chunk 的位置和 migrate 流程等等。
+  - 而使用者端主要就是透過使用實作了 Google file system 的 interface 來對目標檔案讀取與寫入的。
