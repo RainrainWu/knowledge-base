@@ -90,3 +90,42 @@
   3. inconsistent: 如果一個更動遭遇錯誤的話就會是這狀態，不同使用者會看到不同的資料。
 - Google file system 主要提供了 write 和 record append 兩種資料改動，前者是將資料直接覆蓋寫入在指定的檔案內容位置，後者是自動將新資料皆欲在檔案尾部寫下去。
 - 對於同個 chunk 的多個備份副本，master node 會發布同樣先後順序得更動操作，並用版本號來檢驗 chunk 是否過期或沒更新到最新的更動內容，若發現毀損則會立即動用另個合法的副本來更新。
+
+### Implications for Applications
+- Google file system 透過上述對於操作的基本設計（比如 record append, checkpoint 等等）就已經能實現寬鬆的一致性。
+
+# SYSTEM INTERACTIONS
+- 這個系統中很大的一個關鍵就是要盡可能降低 master 的工作量負擔，這段會講一些 master node, chunkserver, client 在互動上的設計。
+
+## Leases and Mutation Order
+- mutation 是可以被 apply 到任一個 chunk 副本上的，對此使用到 lease 來確保 mutation 之間的順序一致。
+  - master node 首先會選擇一個 chunk 眾多副本中的其中一個作為 primary，由他來提取對於該 chunk 的 mutation，而其他副本必須依循 primary 所編排 mutation 順序。
+  - 而一旦 primary 成功的開始 apply mutation 後便可以透過 Heartbeat 機制持續的和 master node 要求延續授權。
+  - 即使 master node 和當前 primary 失去聯繫，他也能立即選用另個副本做為 primary，之後的 mutation 順序便換成以新的 primary 為主。
+  - 詳細流程圖可參考原始論文。
+- 當一個 mutation 的體積過於龐大或是有橫跨到 chunk 的邊界的話，client 端會負責將其轉換為多個獨立步驟。
+  - 但若是由很多個來源併發寫入的話，可能會導致彼此的多個步驟相互穿插，而形成上述 consistent 但並非 defined 的狀態。
+
+## Data Flow
+- 這部分的設計期望是盡可能善用各個節點的 network bandwidth，並避免壅塞和延遲問題。
+  - 因此在傳輸上，資料是以線性的方式一個接個一個的更新到所有 chunk servers 上的，也久是說他的拓璞形狀是個鏈狀，而不是其他如 tree 或是 star 的結構。
+  - 而為了迴避掉高延遲的傳輸路徑，每個 chunk server 在收到新資料時，都會選擇離自己最近且尚未收到新資料的節點進行傳送。其中對於距離遠近的判定是用 IP 來計算的。
+
+## Atomic Record Appends
+- 相對於直接寫入需要指定檔案中的 offset 位置，record append 只要指定檔案即可。
+  - google file system 是採用 at-least-once 的交付機制，所以寫入至少會被執行一次。
+- 然而這對於 client 來說就需要一些更複雜的實作：
+  - 比如當這次 record append 會超出 chunk 大小時，chunk 會回覆給 client 要求在下個 chunk 重新操作，同時為了避免其端的操作發生，每次的操作大小應會被嚴格限制在四分之一 max chunk size 以下。
+  - 若有任一個 chunk 副本的操作失敗，client 端都會在重新寫入一次，這導致可能有 chunk 因此持有重複的寫入資料。
+
+## Snapshot
+- 這個設計的目的是希望在盡可能不干擾當前的 mutation 執行的情況下建立出檔案或者個資料節路逕的備份副本。
+  - 在執行一個 file 的 snapshot 前，master node 會撤回當前與該 file 相關的所有 chunk 中 primary 副本的 lease，這使得所有 client 端在找不到當前 primary 的情況下會主動聯繫 master node，這便讓 master node 有個機會來暫時阻擋更動並創建 snapshot。
+
+# MASTER OPERATION
+- master node 的主要工作包含 namespace 管理、chunk 生命週期管理、工作量負載平衡等等。
+
+## Namespace Management and Locking
+- master node 中的 metadata 和每個檔案所在的 full path 是一對一對應的，並且都帶有自己的 read-write lock。
+- 每次要進行操作時，必須持有目標檔案路徑的 write lock 與其所有父路徑的 read lock，因為父路徑的 read lock 已經足以防止該路徑遭到刪除或重新命名。
+- 其中 read lock 彼此之間不會 block，因此可以容許在同個路徑下的併發創建檔案。
