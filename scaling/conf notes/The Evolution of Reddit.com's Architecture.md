@@ -35,4 +35,24 @@
   1. remove from cluster
   2. found references left around to things that doesn't exist
   3. always starts with a primary saturating its disks, so they decide to upgrade hardware
-  4. 
+  4. The reason is the wrong permission setup cause the application can write into secondary db, and cache in the memcache at the same time, but it does not sync to the whole cluster since it is just a secondary db, so query the object written in it on other server will looks like querying an non-exists thing.
+- use service discovery system to find database
+
+### Comment Trees
+- Use fastlane strategy to isolate the processing of hot threads with massive comment, so they will not slow the whole website down.
+  - but the fastline queue still growth dramatically and cause the service goes down
+  - set max length for each queue so no queue can consume all of resource
+
+### Autoscaler
+- save money off-peak, and automatically react to higher demand
+- plan for scale the Zookeeper cluster
+  1. launch new cluster in VPC
+  2. stop all autoscaler service
+  3. repoint autoscaler agents on all servers to new cluster
+  4. repoint autoscaler services to new cluster
+  5. restart autoscaler services
+  6. nobody knows anything happened
+- but puppet agent ran and re-enabled the autoscaler services after step 2
+  - the services still pointed at old cluster currently
+  - meanwhile the new cluster was seen as unhealthy and terminated
+  - because all cache server was lost, so the system have to re-warm gentlety or massive read operation will hit PostgreSQL directly
