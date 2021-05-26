@@ -18,8 +18,14 @@
 - Scalable 
 
 # Event Sourcing Overview
-Rest Endpoint -> Aggregate Service -> Aggregate Repository -> Event store
+- Rest Endpoint -> Aggregate Service -> Aggregate Repository -> Event store
+- Storing the events happened over time instead of storing the current state
 
 # Deep Dive into the Event Sourcing Architecture
 
 # Working with the Livense Accounting Service
+
+# Scaling
+- storing all event need a lot of space
+  - Use D2 type of node on AWS EC2 for more storage, but may cause a higher latency
+  - Keep extract the old version event data from I2 node (SSD) and archive them into D2 node(HDD)
