@@ -23,5 +23,11 @@
     - determine whether they could be executed parallel or should be sequential
   - query execution
 
-
 ## How does it scale
+- already felling pains about monolithic architecture
+  - Apollo just release the spec of graphql federation
+  - build the gateway base up apollo's reference implementation
+- benchmark to test whther it will add too much latency
+
+## It's the future
+- it is one of the futures to promote productivity
