@@ -6,7 +6,7 @@
 - 回收已經不需使用的記憶體空間是其中一個重要的工作，Python 同樣有自動垃圾回收的機制，主要有兩個不同的演算法：
 
 ### Reference Counting
-- 是 CPython 中主要的垃圾回收機制。
+- 是 CPython 中主要的垃圾回收機制，開發者無法決定啟用或停用。
 - Python 中的每個物件都有其生命週期，而在程式碼中使用的 variable（或稱作 identifier）都是對物件的引用，每多被引用一次該物件的 reference count 就會增加一（比如 assignment operator, argument passing），而取消引用後就會減一。
   - 個別 variable 的 reference count 可用 `sys.getrefcount` 來查看。
   - 在 global scope 所宣告的變數通常會一直留存著，可以使用 `global()` 函數來查看，這也表示對 global variable 所 reference 的物件其 reference count 都不會降至 0，因此儘可能別大量使用 global variable。
@@ -28,7 +28,7 @@
 - 若透過該變數存取的物件並非至關重要，可以使用 `weakref` 這個 module，它可以讓變數在被 assign 時不會直接增加背後物件的 reference count，若該物件採存取時已經被刪除則會回傳 None。
 
 ### Manual GC
-- 若希望嚴格控制 GC 的時機避免與工作量高峰相撞，可以使用 `gc.disable()` 和 `gc.collect()` 來控制。
+- 若希望嚴格控制 GC 的時機避免與工作量高峰相撞，可以使用 `gc.disable()` 和 `gc.collect()` 來控制，只能控制 generational garbage collection 的機制。
 
 ## Reference
 - [Garbage collection in Python: things you need to know](https://rushter.com/blog/python-garbage-collector/)
