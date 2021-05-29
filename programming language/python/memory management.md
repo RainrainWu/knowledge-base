@@ -2,7 +2,39 @@
 - Python 是一門支援 automatic memory management 的語言，除了可以節省心力提升開發速度外，也可以避免忘記釋出記憶體空間或是過早釋出的問題。
 - 這部分內容是以較為廣泛被採用的 CPython implementation 為主。
 
-## 垃圾回收
+## Memory Allocation
+- Python 在運行時會有非常大量小型物件，在 CPython 的實現中所有小於 512 bytes 的物件都會由特製的 PyMalloc 管理器來管理，更大型的物件則是直接由 standard C allocator 來配置。
+
+### PyMalloc
+- PyMalloc 主要將記憶體資源分為三個階層管理，由小到大分別為 block, pool, arena。
+
+#### Block
+- 每個 Block 都是預先切分好的記憶體區塊，每個 Block 都只能儲存一個 Python 中的 object。
+- 總共有 64 種大小不同的 Block，從 8 bytes 至 512 bytes 體積都是 8 的倍數，當需要儲存 object 便會取用最合適的 block 來儲存。
+
+#### Pool
+- pool 內會儲存大量大小相同的 Block，彼此之間用 double-linked list 結構連結，通常一個 Pool 的大小就是一個 memory page 的大小。
+- 每個 pool 都會有一個 \*freeblock 的指標持續維護一個目前閒置中可用 free block 的 singly-linked list，方便快速的找到可用的 block。
+  - 當一個 Block 沒有儲存任何 object 時，他會儲存同一個 pool 內下個可用的 block 的 address，這也可以省掉連續取用同 pool 中 block 的搜索時間。
+  - 在 pool 初始化時只會將前兩個 block 放入 \*freeblock 中，隨著不斷取用 block 她都可以很快的透過下個可用 block 的 address 遞補進來這個 list 中。
+  - 而一但有個 block 不在被使用而被釋出，他便會 insert 到 \*freeblock 的最前端，整個管理策略慧卿相盡可能不用到最後一個 block 為目標。
+- pool 的使用狀態分為三種：empty, used, full。
+- 為了快速找到各個層級的 pool，CPython 也會維護一張 usedpools 的清單，內部包含指向各個層級 pools 的指針，而同個層級的 pool 之間彼此也以 souble-linked list 來連結。
+
+#### Arena
+- 每個 arena 都是在 heap 上一個 256KB 的 chunk，負責配置記憶體空間給 block 和 pool 使用，並存有當前 arena 內可用 pool 的指針及 pool 總數等等 metadata。
+- arena 之間彼此也透過 souble-linked list 連結方便管理。
+
+### Deallocation
+- PyMalloc 的機制其實不會立即把沒在使用的記憶體空間還給 OS。
+  - 因為 OS 配發記憶體空間的對象是 arena，再由 arena 供給給底下的 pool 和 block 使用。
+  - 反過來說，PyMalloc 也只會在一個 arena 內所有的 pool 都清空時才會將整個 arena 的空間歸還。
+- 因此若有個 Python process 執行很長一段時間的話，其中表面上佔用的空間中可能有不少是閒置的，可以透過 `sys._debugmallocstats()` 來檢視細節。
+
+### Reference
+- [Memory management in Python](https://rushter.com/blog/python-memory-managment/)
+
+## Gargabe Collection
 - 回收已經不需使用的記憶體空間是其中一個重要的工作，Python 同樣有自動垃圾回收的機制，主要有兩個不同的演算法：
 
 ### Reference Counting
@@ -30,5 +62,5 @@
 ### Manual GC
 - 若希望嚴格控制 GC 的時機避免與工作量高峰相撞，可以使用 `gc.disable()` 和 `gc.collect()` 來控制，只能控制 generational garbage collection 的機制。
 
-## Reference
+### Reference
 - [Garbage collection in Python: things you need to know](https://rushter.com/blog/python-garbage-collector/)
