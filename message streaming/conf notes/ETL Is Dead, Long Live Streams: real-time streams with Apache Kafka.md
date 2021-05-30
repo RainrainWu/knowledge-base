@@ -16,3 +16,4 @@
 ## Requirements of Modern Streamming System
 - high-volumn and high-diversity data
 - real-time from the grounds up (event centric thinking)
+- Enable forward-compatible data architecture (use the same data differently)
