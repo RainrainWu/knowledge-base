@@ -22,3 +22,13 @@
 - Offline computation and store the data into cache cluster periodically
   - Fetch each part of cache to compose what the user want
   - Maybe prepare multiple versions of cache for diversity
+
+## Moneta
+- Evolution of the EVCache server with SSD.
+
+### Optimization with SSD
+- Access patterns are heavily region-oriented
+- Hot data is used often, while cold data is almost never touched
+  - keep hot data in RAM, cold data in SSD
+  - size RAM for working set, SSD for overall dataset
+  - 70% reduction in cost
