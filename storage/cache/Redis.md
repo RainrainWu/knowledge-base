@@ -26,6 +26,16 @@
 2. 資料複製完成後便可開始手動進行 failover 將 master 角色轉移至新版本，轉移時可能會有導致系統不穩風險，是系統對穩定度的要求和不統版本間組成 cluster 的相容性來決定要一次性全部 failover 還是逐個完成
 3. 新版本的 master 轉移完成後，逐步啟用新版本的節點作為 slave 加入 cluster，並逐步汰換舊版本的節點至全數更新為止。
 
+### Cache Warming 流程
+1. 在擴展 cluster 或是有節點臨時失效需要重啟時，為了避免新啟動的節點因不含任何資料而形同虛設，導致仍有 hit rate 驟降且大量請求湧入資料庫的問題，透過 warming 機制來讓新節點快速引入當前關鍵資料。
+2. 但同時需要考慮若直接從當前運作中的節點進行大規模的 dump 的話，可能會影響 client 端的使用狀況。
+3. 比較折衷的做法是先把所有的 key 透過 slot 的資料 dump 下來後，切分成不同 chunk，再由一些 worker node 分工去 get 到所有 key 的 value 填入新的節點中。
+  - 由於第一步只抓取 key 的操作只需要 slot 的 metadata 即可不需要真的存取所有的 value，因此效能比較不會有劇烈影響。
+  - 讓多個 worker node 像 client 一樣去取 value 的好處是和 client 一樣從外部存取可以直接被負載平衡避免只針對單節點，同時也可以依據時間需求或當前工作量調整 worker 數量。
+4. 多數時候也可以在新增節點時就設定 dual-write 機制讓最新的 cache 同時也寫入到新節點中，而從其他節點複製來的資料因為會有時間差延遲所以就要避免覆蓋到新資料。
+
+- [Cache warming: Agility for a stateful service](https://netflixtechblog.com/cache-warming-agility-for-a-stateful-service-2d3b1da82642)
+
 ## 常見問題
 
 ### 空間限制
