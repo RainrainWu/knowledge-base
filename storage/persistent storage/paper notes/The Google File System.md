@@ -151,3 +151,9 @@
 - 用於檢測 orphaned chunks 的機制也十分相似，透過 chunk server 和 master node 之間的 hearbeat 來比對資訊。
   - 當 chunk server 得知自身持有一個不在 master node metadata 中的 chunk 時，便可以自行刪除它。
  
+### Discussion
+- 透過上述依賴 master node 定期掃描的惰性刪除機制相對於立即性 eager deletion 的好處是：
+  - 刪除檔案的薰在分散是係桶的傳地中可能丟失，導致沒收到刪除通知的節點留存著沒有用的資料。
+  - 歸納為 master node 定期機制的話可以作為非同步背景作業避免佔用即時運算資源，同時也可以 batch 操作。
+  - 有時可能會產生意外的刪除行為，若要重建所有 replica 也是很大的花費，先用隱藏的檔案名稱來屏蔽可以避免。
+  - 但面對高頻率的創建與刪除檔案時可能會因為無法即時回收空間而遺留大量的隱藏檔案。
