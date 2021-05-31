@@ -157,3 +157,10 @@
   - 歸納為 master node 定期機制的話可以作為非同步背景作業避免佔用即時運算資源，同時也可以 batch 操作。
   - 有時可能會產生意外的刪除行為，若要重建所有 replica 也是很大的花費，先用隱藏的檔案名稱來屏蔽可以避免。
   - 但面對高頻率的創建與刪除檔案時可能會因為無法即時回收空間而遺留大量的隱藏檔案。
+
+### Stale Replica Detection
+- chunk 的副本可能會因為 mutation 傳遞上丟失而有版本過期的問題，這主要是透過 version number 來解決
+  - 當 master node 將新的 lease 授權給 primary chunck 時，所有的 replica 會再通知 client 可以寫入前同時跳版本。
+  - 當 master 透過和 chunk server 之間的 hearbeat 機制發現有 chunk 的版本落後時，會在例行的垃圾回收作業將其移除，以避免暴露給 client 端過期的 chunk 資訊。
+  - 當 master 發現有 chunk 的版本高於自己時，master 會假設是自身漏接更新訊息因此直接採用擁有最新版本的 chunk。
+  - master 在和 client 傳遞 metadata 溝通時，會帶有 version number 資訊以用來確認取得最新版本的檔案。
