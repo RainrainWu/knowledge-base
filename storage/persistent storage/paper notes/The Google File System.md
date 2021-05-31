@@ -1,5 +1,5 @@
 # The Google File System
-> [原始論文](https://dl.acm.org/doi/pdf/10.1145/945445.945450?casa_token=yOUt9xK1agUAAAAA:67h6kd4g-Uownn5b2Bbu2AS-SZSi5Cj1_jyXG-VQnfrtKEBChax1KOMF54c8UkzFu48b7E8F-Gei)
+> [原始論文](https://dl.acm.org/doi/pdf/10.1145/945445.945450?casa_token=AbimwJhe4_kAAAAA:141_axCki6JZqBR3hXW7kD2l7Gxm1PTxEL3yUDspYHcDvKaMXIlHI1CsAdBdGAQcBFMqmxQN2-Kz)
 ###### tags: `fault tolerance`, ` scalability`, `data storage`, `clustered storage`
 
 # 摘要
@@ -129,3 +129,25 @@
 - master node 中的 metadata 和每個檔案所在的 full path 是一對一對應的，並且都帶有自己的 read-write lock。
 - 每次要進行操作時，必須持有目標檔案路徑的 write lock 與其所有父路徑的 read lock，因為父路徑的 read lock 已經足以防止該路徑遭到刪除或重新命名。
 - 其中 read lock 彼此之間不會 block，因此可以容許在同個路徑下的併發創建檔案。
+
+## Replica Placement
+- 將資料可靠性最佳化，並依照不同機器間的網路品質調整策略，比如同個機架上伺服器間的有線網路比跨機房的網路還要快，但同時也要顧慮整個機架毀損的問題。
+
+## Creation, Re-replication, Rebalancing
+- 再決定要把新的 chunk replica 放在何處時主要考慮三個因素
+  - 是否有機器目前的硬碟空間用量過低，會傾向在硬碟用量較低的節點上創建
+  - 每個伺服器當前的 chunk replica 創建數量，因為在創建的過程中會有大量的寫入因而壓縮運行服務可用的資源
+  - ˋ否也能有物理上甚至地理位置上的分散性，比如不同機架與不同機房
+- 一旦一個 chunk 的 replica 數量低於使用者設置的目標 master node 就會指揮選上的 chunk server 去複製，但多個複製機制之間也會有優先級，比如最近頻繁使用的活躍檔案就會比已經刪除的檔案更快被處理
+- 同時 master node 也會控制每個 cluster 和 chunk server 同一時間執行的複製工作數量，以避免影響運作效能
+
+## Garbage Collection
+- Google file system 在垃圾回收上是採取惰性策略的，被刪除的檔案並不會被馬上回收空間，而是者有在特定的時刻才進行所有 file 和 chunk 的垃圾回收。
+
+### Mechanism
+- 當檔案被刪除時，他會被重新命名為一個隱藏的檔案名稱並帶有一個刪除的時間戳。
+  - 當 master node 進行例行性的檔案掃描時，若隱藏名稱的檔案已經超過一定時間了他就會被回收掉（預設是三天）。
+  - 在被刪除都可以透過重新命名為一個正常的檔案名稱來快速復原。
+- 用於檢測 orphaned chunks 的機制也十分相似，透過 chunk server 和 master node 之間的 hearbeat 來比對資訊。
+  - 當 chunk server 得知自身持有一個不在 master node metadata 中的 chunk 時，便可以自行刪除它。
+ 
