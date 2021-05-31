@@ -164,3 +164,27 @@
   - 當 master 透過和 chunk server 之間的 hearbeat 機制發現有 chunk 的版本落後時，會在例行的垃圾回收作業將其移除，以避免暴露給 client 端過期的 chunk 資訊。
   - 當 master 發現有 chunk 的版本高於自己時，master 會假設是自身漏接更新訊息因此直接採用擁有最新版本的 chunk。
   - master 在和 client 傳遞 metadata 溝通時，會帶有 version number 資訊以用來確認取得最新版本的檔案。
+
+# FAULT TOLERANCE AND DIAGNOSIS
+- 在大規模分散式系統中節點失效是很頻繁發生的，因此無法完全信任機器或是其儲存的資料，同時也要思考如何診斷其發生的問題。
+
+## High Availability
+
+### Fast Recovery
+- 所有的節點都被設計為在幾秒內便可重啟，同時節點也會定期重啟來確保復原機制可正常運作。
+
+### Chunk Replication
+- 雖然 replication 已經提供了基本的保障，但仍在考慮其他如 parity 或 erasure codes 的冗余機制。
+- 其中一個關鍵點是 read 和 record append 的操作是遠多與 random write 的。
+
+### Master Replication
+- master node 的資料是有做多機器備份的，因此一旦偵測到節點下線幾乎可以立刻重啟新的 master node。
+  - 而 client 端是使用 canonical name 來存取 master node，因此若 master node 換成新節點時僅需調整 DNS 設定即可。
+  - 備份用的 shadow master 因為是透過讀取 operation log 來更新可能有些微的版本落後，可以視情況分攤一些不要求即時資料的工作量。
+
+## Data Integrity
+- 透過 chunk replica 之間的資料比對來診斷是否有資料損毀非常的消耗性能，而且在 primary chunk 將 mutation 編排好順序並發布前，replica 之間有所不同是可容許的。
+- chunk 內部會切分為一個個 64 KB 的區塊，各自都有個 32 bit 的 checksum，再回傳資料給讀取者之前都會先檢查對應區塊的 checksum 是否正確以避免擴散錯誤的資料。
+  - 當 checksum 錯誤時就會回傳錯誤訊息，並向 master node 回報自身問題餅使其另外設立新的 chunk replica。
+  - checksum 機制固然會影響到 read 的效能，因此有針對佔比較大的 append 操作來優化，多數時候僅需要對尾端的數個區塊計算 checksum。
+  - 在相對閒置的時間 chunkserver 也會自主掃描是否有 checksum 不合法的 chunk，以此來檢測非常少被讀取的區塊。
