@@ -188,3 +188,12 @@
   - 當 checksum 錯誤時就會回傳錯誤訊息，並向 master node 回報自身問題餅使其另外設立新的 chunk replica。
   - checksum 機制固然會影響到 read 的效能，因此有針對佔比較大的 append 操作來優化，多數時候僅需要對尾端的數個區塊計算 checksum。
   - 在相對閒置的時間 chunkserver 也會自主掃描是否有 checksum 不合法的 chunk，以此來檢測非常少被讀取的區塊。
+
+## Diagnostic Tools
+- 透過運行中不斷紀錄的 diagnostic log 來提供可重現性，配合紀錄 req, resp 的 RPC log 就可以拼湊出系統和外界互動的狀況。
+
+# MEASUREMENTS
+- 原始論文中提供了詳細環境資訊和關鍵指標，因為不是設計上的思維要點因此就不特別寫筆記．偏向直接至原始論文查看。
+
+# EXPERIENCES
+- 一些在 Linux file system 相關的踩雷筆記，因為都是特並版本的特案並非設計上的思維要點因此就不特別筆記了。
