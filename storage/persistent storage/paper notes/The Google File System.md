@@ -39,9 +39,6 @@
   - master 節點主要負責管理整個叢集的 metadata，包含命名空間、存取權限、目前每個 chunk 的位置和 migrate 流程等等，同時透過 heartbeat 機制收集每個 chunkserver 的狀態。
   - 而使用者端主要就是透過使用實作了 Google file system 的 interface 來對目標檔案讀取與寫入的。
   - 而在使用者端與 chunkserver 身上都沒有 cache 機制，因為 streamming 操作的檔案往往非常大，cache 的效益並不高，反觀沒有 cache 後自然也就沒有了一致性的問題。
-<img width="1472" alt="截圖 2021-05-21 下午6 57 25" src="https://user-images.githubusercontent.com/26277801/119127053-66428c80-ba66-11eb-8439-ba02a53f0b7f.png">
-
-> [圖片來源為原始論文](https://dl.acm.org/doi/pdf/10.1145/945445.945450?casa_token=yOUt9xK1agUAAAAA:67h6kd4g-Uownn5b2Bbu2AS-SZSi5Cj1_jyXG-VQnfrtKEBChax1KOMF54c8UkzFu48b7E8F-Gei)
 
 ## Single Master
 - 在一個叢集中永遠只會有一個 master 節點，這可以確保集中管理所有叢集內的資訊。
