@@ -14,10 +14,18 @@
     - 若次步驟因為 goroutine 過多或是寫入操作過於頻繁等等原因而執行過於緩慢，garbage collector 會放緩 allocation 的速度病使用更多的 application goroutine 來進行 mark assist 提升效率。
   - Mark Termination - STW
     - 在這個階段會把寫入屏障 Write Barrier 給關閉，並啟動各式各樣的清理工作，這段期間同樣是處于 STW 狀態的，平均耗費 60 - 90 ms。
+- 由此可知，Go 語言的 garbage collector 造成 latencies 上升的主因有兩個，一是取走了 25% 的計算資源，另個是 STW 的 Write Barrier。
 
 ## Configuration
 - 針對 GC 的操作也有一些細微的設置可以調整，用來進一步的最佳化執行過程。
   - GC Percentage
     - 可以用來設置當 memory allocation 達到當前使用中空間的多少倍時，會觸發下一次的 GC。
     - 預設是 100，也就是多一倍。假設最近一次 GC 後仍有 200 MB 的 memory 正在使用中，那麼達到 400 ＭB 時就會觸發下一次 GC。
+    - 增加 GC Percentage 固然可以使 GC 頻率下講，但也意味著每次都必須用更長的時間來處理。
 
+## Pacing
+- Go 的 garbage collector 會透過 pacing 演算法來預估自己進行 GC 所需的時間，主要透過當前 global heap allocation 的頻率和先前幾次 GC 的經驗來評估和修正。
+- 由於進行 GC 會佔用直行資源的關係，勢必會導致 application goroutine 的 latencies 上升，因此選用合適的時機進行 GC 可以避免效能崩壞。
+
+## References
+- [Garbage Collection In Go : Part I - Semantics](https://www.ardanlabs.com/blog/2018/12/garbage-collection-in-go-part1-semantics.html)
