@@ -13,6 +13,8 @@
     - 就算沒有 operation log 要更新也會作為 heartbeat 發送，讓 follower 知道 leader 還活著。
   - RequestVote RPC
     - 一旦 follower node 超過一定期限沒有收到 leader node 的 heartbeat，他就會當作 leader 已經死了並通知其他 follower 發起投票。
-    - 投票行為是帶有單調遞增的版本號的，因此就算原本的 leader 因網路隔離問題一陣子後又加回來，也會因為版本較舊被視為過期而降級為 follower。
+    - 投票行為是帶有單調遞增的版本號的（專有名詞是 term），因此就算原本的 leader 因網路隔離問題一陣子後又加回來，也會因為版本較舊被視為過期而降級為 follower。
     - 假設當前版本 t 的 leader 掛了，第一個觸發 heartbeat 超時機制的 follower 就會向其他 followers 發出 t + 1 版本的 RequestVote RPC，若半數以上都同意他便會他便會成為新的 leader node 並開始擴散 operation log。
     - 盡可能將各個 follower node 的 heartbeat 超時時間設置的不一樣，避免一瞬間有大量的 RequestVote RPC、跳了好多個版本號的 leader。
+    - 同時須考量發起 vote 的 follower 有可能因為網路延遲而在 operation log 還沒跟上最新還沒跟上最新進度，因此在投票時只允許投票給 operation log 進度與自身相同或是更新的節點。
+- 為了避免 split brain 問題，所有 node 的所有 RPC 都會附上版本號（term），一但當前的 leader 收到了比自己更高的 term，就會立刻自動降級為 follower。
