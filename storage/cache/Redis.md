@@ -3,6 +3,34 @@
 - 將資料保存在記憶體中以提昇操作效率。
 - 雖然記憶體中的資料是揮發性的，但 Redis 也可以支援定時 snapshot 寫入持久化儲存的備份功能。
 
+## Event Loop
+- Redis 會用 thread pool 管理多個 thread 個別專職負責不同的事務，比如叢集同步、GC、讀取寫入操作等等。
+- 但本質上各個功能都是 single thread 的，主要功能的 event loop 也是，這使得他不會有 context switch 的消耗。
+- Event Loop 主體是個多工器的 select 機制，會依照當前的任務、作業系統、資源用量來決定操作方式。
+- 其負責的任務可分為兩大類，分別是 file event 和 time event。
+  - file event 多半是檔案的讀寫，會有個 timeout 的期限，預設是下一個 time event 的時間點。
+  - time event 多半是 redis 的例行作業，比如 `serverCron` 會透過 system call 取得全局 timestamp 並和其他任務共享節省消能開銷。
+
+## Memory Optimization
+- Redis 在向 OS 請求 allocate 記憶體資源時是以 arena 為單位的，內部已經有大量預先切分好的不同大小的記憶體區塊。
+- 預先切分好的記憶體大小好處是不用每次請求時花時間計算大小切分，也不會因為大小不一的記憶體區塊即使回收後仍造成記憶體空間破碎的問題。
+- 負責不同任務的不同 thread 彼此之間不會共用 arena，因此不用同步資源控管的問題。
+- Redis 同時也有對於 hash table 稀疏程度容忍的臨界值，一旦儲存過於鬆散就會啟用另個較小的 hash table 及非同步 rehashing 機制避免佔用過多閒置資源。
+
+### References
+- [jemalloc](https://github.com/jemalloc/jemalloc)
+- [In-Memory Computing At Aerospike Scale: When To Choose And How To Effectively Use JEMalloc](http://highscalability.com/blog/2015/3/17/in-memory-computing-at-aerospike-scale-when-to-choose-and-ho.html)
+
+## Persistence Layer
+- Redis 雖是在 RAM 層面為主的應用，但也能支援持久化的功能，大致分為 snapshot 和 operation log 兩種概念實作。
+- snapshot 的做法是透過 Redis Database 定期將當前資料寫入 disk，會透過 fork 出來的一支 child process 負責。
+  - 在 snapshot 的過程會啟用 copy-on-write 的機制同時持久化新的寫入，因此不需要 block 著正在使用中的 table。
+  - 雖然 child process 會取走 parent process 的部分資源造成效能降低，但是可以透過時間間隔或是操作數間隔來選定合適的時間錯開 rush hours。
+  - 持久化下來的 snapshot 也能隨取即用，適合用來 recover 意外死掉的節點。
+- operation log 的做法是透過 append-only files (AoF)，會在每次寫入操作的同時寫紀錄下操作內容。
+  - 多數時候操作記錄會先記錄在 RAM 中，等待一段時間或是一定操作次數後才透過 `fsync` 寫入 disk。
+  - 歷史性的紀錄可以將效能損耗較為均分到時間線上，也能提供 point-in-time recovery，但就是要一道道指令執行沒辦法馬上使用。
+
 ## Clustering
 - 可以透過建立多個 redis 節點來組成 cluster，除了能分散儲存資料外，也能受益於 master-slave 備份機制對抗節點失效的風險。
 - 組成 cluster 中的每個 redis 節點都必須開啟兩個 port
