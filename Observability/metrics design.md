@@ -15,6 +15,7 @@
   - CPU usage, RAM usage
   - Disk IO, Network IO
   - Response latency
+  - Number of threads
 - 這部分的資訊可能需要 higher privileges 來獲取，可能導致安全性問題，同時不同 OS 的指令可能也不同，也許就交由 IaaS 平台最為合適。
 
 ### Programming Language Oriented
