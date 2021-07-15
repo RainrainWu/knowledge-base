@@ -29,7 +29,7 @@
   - not allow concurrent write
 - CRDT (conflict free replicated data type)
 
-### CRDTs
+## CRDTs
 - Features
   - Associated
     - (X + Y) + Z = X + (Y + Z)
@@ -44,3 +44,9 @@
   - Update while write
   - Merge while repair
     - Merge on read path while read repair
+
+### PNCounters
+- Each replica maintain 2 local counters
+  - Positive counter: track increments
+  - Negative counter: track decrements
+  - Final counter value = sum of pcounter - sum of ncounter
