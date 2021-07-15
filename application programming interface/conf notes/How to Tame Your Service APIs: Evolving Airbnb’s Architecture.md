@@ -24,14 +24,17 @@
   - The developer experience
   - The access control
 
+## Abstraction APIs
+
 ### SOA v2
 - Abstraction
   - Internal services
   - Data aggregators
   - Service blocks
 - GraphQL for aggregators
-
-
-## Abstraction APIs
+- Facade service block
+  - Unified API and schema for similar services (user profile, reservations, ...)
 
 ## Operating APIs
+- Auth for different service blocks
+- Schema browser IDE for better experience
