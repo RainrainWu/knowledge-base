@@ -83,3 +83,12 @@
   - 一般常見的 inconsistency 可以透過釐清 causality 來解決，Dynamo 主要是靠 vector clock。
   - 當出現版本紛歧的時候，需要一些特別的 reconciliation 來解決衝突，細節的部分類似 CRDT 的概念，難以透過筆記解釋建議直接查。
 - 對於每個 update 操作，Dyanmo 會要求使用者必須在 context 內指名期要徵新的物件版本。
+
+## Execution of get () and put () operations
+- 基於信任所有節點的前提，所有 Dynamo 的集點都可以說 get 和 put 操作並回傳對應資料。
+- 而一個 request 會被導向哪個節點處理基本上有兩個決策管道。
+  - 一個是透過 generic load balancer 透過 load information 作分流。
+  - 另個是透過能夠存取所有節點資訊的 client lib 來直接導向負責目標資料的節點。
+  - 前者可以和 Dynamo 解耦，後者則是能有效迴避潛在的 forward latency。
+- 接收了 request 並承擔 return 責任的節點被稱為 coordinator，理論上通常是針對該 key 操作的理想節點清單中的第一名。
+- 每個 key 都有維護一個理想節點清單 preference list 以維持資料品質，如果節點是透過 LB 獲得的 request 但卻不再目標 key 的理想清單上，他便不會成為 coordinator 而是把該 request 轉發。
