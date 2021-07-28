@@ -52,4 +52,7 @@
   - 更方便的對各個 application 的資料分開做設定，應該是不同 key-value 之間切的很乾淨的關係。
 
 ### Discussion
-- Dynamo 首要目標就是 always writeable。
+- 到這裡可以列出 Dynamo 的主要需求。
+  - 首要目標就是 always writeable。
+  - 預設信任所有節點，可以自主運作並回傳資料。
+  - 不需要階層式 namespace 或複雜的 schema。
