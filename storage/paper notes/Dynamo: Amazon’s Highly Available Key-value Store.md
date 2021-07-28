@@ -92,3 +92,6 @@
   - 前者可以和 Dynamo 解耦，後者則是能有效迴避潛在的 forward latency。
 - 接收了 request 並承擔 return 責任的節點被稱為 coordinator，理論上通常是針對該 key 操作的理想節點清單中的第一名。
 - 每個 key 都有維護一個理想節點清單 preference list 以維持資料品質，如果節點是透過 LB 獲得的 request 但卻不再目標 key 的理想清單上，他便不會成為 coordinator 而是把該 request 轉發。
+- 一致性管理的部分也有類似 quorum 的機制，可以分別對讀取 R 和寫入 W 操作設定必須訪問幾個 peer node 確認一致性後才可執行。
+  - 但 Dynamo 較為看中效能勝過一致性，因此通常會採用 R + W < N 的設定。
+  - 當一個節點收到寫入操作，他會透過 vector clock 打上版號並廣播給該 key 的 preference list 上的所有節點，一旦有至少 W-1 個節點回報成功後該操作便可視為成功。
