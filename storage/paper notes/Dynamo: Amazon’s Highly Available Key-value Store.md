@@ -71,3 +71,15 @@
   - 當街點失效時，其所負責的多個 virtual node 的工作量能夠被分攤到更多機器上。
   - 當心節點加入時，給予合適數量 virtual node 可以讓他獲得和其他節點大致相同的工作量。
   - 可以基於機器資源的不同給予不同數量的 virtual node。
+
+### Replication
+- 備份的部分也是利用了 hash ring 的結構優勢，透過一個 replica factor 的參數 k，在環狀位置上的前 k 個片段所負責的節點做備份。
+  - 比如當前節點是 N，而 replica factor 是 2，那就會在 N - 1 和 N - 2 兩個節點上備份 N 的資料。
+
+### Data Versioning
+- 由於 Dynamo 提供的事 eventually consistency，所以寫入操作是容許非童多傳遞至其他節點的，但也因此需要 version 的概念確定先後順序。
+  - 其中有有許多很棘手的情況，比如說兩筆新加入購物車的商品被寫入到了不同節點，那這輛個節點應該如何融合？
+    - 單純用 last writer win 操略的話，可能其中一個商品就會被清除掉，但這是不可以的所以要想辦法避免。
+  - 一般常見的 inconsistency 可以透過釐清 causality 來解決，Dynamo 主要是靠 vector clock。
+  - 當出現版本紛歧的時候，需要一些特別的 reconciliation 來解決衝突，細節的部分類似 CRDT 的概念，難以透過筆記解釋建議直接查。
+- 對於每個 update 操作，Dyanmo 會要求使用者必須在 context 內指名期要徵新的物件版本。
