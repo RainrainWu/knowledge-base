@@ -24,4 +24,21 @@
   - query model 的讀寫操作都可以透過一個 primary key 定位到目標紀錄，也不需要使用複雜的 relational schema。
   - 較弱的 ACID 需求，根據過去的經驗過高的 ACID 要求會導致效能上的瓶頸，而 Dynamo 適度的降低了 consistency 的等級。
 
-### Service Level Agreements (SLA)
+### Design Considerations
+- 當我們為了 availability 而在 consistency 上稍作讓步後，我們便需要處理何時該解決 conflict 以及由誰解決的問題。
+  - 傳統做法上多數時候因爲讀取操作遠多於寫入操作，因此會集中在寫入操作時才 resolve conflict 以確保大量讀取操作能被快速完成。
+  - 但 Amazon 的許多操作如加入購物車和更改店家資訊若因為一致性問題而被暫時拒絕寫入操作，就會很大程度影響使用者體驗。
+  - 所以反其道而行只在 read 時處理 conflict 從而保證寫入操做絕對可行。
+- 整個 Dynamo 的設計大至尊從以下幾個原則
+  - Incremental scalability：能夠一次擴展一台節點並最小化對使用者和系統的影響。
+  - Symmetry：每個節點的職責應該和他的 peers 完全相同，不應該存在嘟一無二的節點。
+  - Decentralization：前者的強化，捨棄中央控制轉為追求去中心化，此舉能大幅增加可擴展性和可用性。
+  - Heterogeneity：能夠接納系統中存在不同規格的節點，並依據資源調度最合適的工作量。
+
+## RELATED WORK
+### Peer to Peer Systems
+- P2P 系統的幾代演進
+  - 初代的 P2P 系統主要用於檔案分享，比如 Freenet 和 Gnutella，這時期的連線通常是隨機建立的，處理 query 時會大量 Broadcast 至其他節點並盡可能獲得更多資訊。
+  - 接著演化出了 Structure P2P 的架構，透過統一的 protocol 來讓任意節點可以快速的把 query 導向擁有目標資料的其他節點並有效降低 hop 數，比如 Pastry 和 Chord。
+    - 如果讓節點中都存有足夠的 routing 資訊的話，也是有可能降至 O(1) 的時間複雜度的，意味著立即 route 至確定有目標資料的節點。
+  - 更後期的 Oceanstore 和 PAST 正式建立於這些基礎上，並加上了 concurrency control 和 resolve conflict 的功能。
