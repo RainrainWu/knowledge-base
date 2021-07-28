@@ -56,3 +56,18 @@
   - 首要目標就是 always writeable。
   - 預設信任所有節點，可以自主運作並回傳資料。
   - 不需要階層式 namespace 或複雜的 schema。
+  - 99.9% 的讀寫操作都必須在數百 ms 內完成。
+- 其中分散式系統中處理 query 時 multi-hop 的行為是拖慢響應速度的主因，因此 Dynamo 的每個節點都維護足夠的 routing 資訊直接導向儲存目標資料的節點，進而把時間複雜度壓在 O(1)。
+
+## SYSTEM ARCHITECTURE
+### System Interface
+- 由於是 key value 的儲存，因此 Dynamo 主要提供兩個 API，get 和 put，同時附帶 context 物件提供版本等等資訊。
+
+### Partitioning Algorithm
+- 為了能接受動態的增加節點，Dynamo 透過 consistent hashing 進行 partition 並散佈到系統中，也正是常見的 hash ring。
+- hash ring 的分佈邏輯讓叢集新增或刪除節點是，可以只調整其在圓環上相鄰的 partition 即可，其他的部分不會被影響。
+- 不過基礎的 consistent hashing 也有一些顯而易見的問題，比如不均勻分布，以及無法適應叢集中多種不同規格節點的異質性。
+- 為了應對此問題，Dynamo 會再將 physical node 切分為規格更加一致的 virtual node，並散佈在 hash ring 的不同位置上，而 virtual node 的好處包含
+  - 當街點失效時，其所負責的多個 virtual node 的工作量能夠被分攤到更多機器上。
+  - 當心節點加入時，給予合適數量 virtual node 可以讓他獲得和其他節點大致相同的工作量。
+  - 可以基於機器資源的不同給予不同數量的 virtual node。
