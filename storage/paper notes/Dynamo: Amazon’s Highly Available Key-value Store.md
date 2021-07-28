@@ -42,3 +42,14 @@
   - 接著演化出了 Structure P2P 的架構，透過統一的 protocol 來讓任意節點可以快速的把 query 導向擁有目標資料的其他節點並有效降低 hop 數，比如 Pastry 和 Chord。
     - 如果讓節點中都存有足夠的 routing 資訊的話，也是有可能降至 O(1) 的時間複雜度的，意味著立即 route 至確定有目標資料的節點。
   - 更後期的 Oceanstore 和 PAST 正式建立於這些基礎上，並加上了 concurrency control 和 resolve conflict 的功能。
+
+### Distributed File Systems and Databases
+- 在許多 P2P 系統中僅能使用 flat namespaces，這點在較近代的分散式檔案系統中所提供的 hierarchical namesapce 獲得解決，比如 Ficus 和 Coda。
+- 而 resolve conflict 的部分也有很多現行的解決方案，比如 google file system，只是它使用了 master node 的位階制度。
+- 另外也有像 Bayou 這類對於斷線後獨立運作的能力的實現，在應對 network partition 上有所表現也大大增加了 partial tolerence 的特性。
+- 和上述幾個實踐相比，Dynamo 的 key value store 有一些較為明顯的優勢。
+  - 儲存的單元物件位變得更小 (< 1MB)。
+  - 更方便的對各個 application 的資料分開做設定，應該是不同 key-value 之間切的很乾淨的關係。
+
+### Discussion
+- Dynamo 首要目標就是 always writeable。
