@@ -2,7 +2,12 @@
 
 ## Performance
 
+### Request Routing
 - Provide specific shard routing to force the request be handled by target shards, while the data should also be routed specifically while writing.
+
+### Others
+- [Indexing](https://ithelp.ithome.com.tw/articles/10252325)
+- [Searching](https://ithelp.ithome.com.tw/articles/10252695)
 
 
 ## Reliability
@@ -41,6 +46,11 @@
     - Warm nodes are read-only, more resource are used on temp caches.
     - Cold nodes are archived, caches wil also be released right after respond.
 - Rollup regularly.
+
+### Others
+- [Index Storage](https://ithelp.ithome.com.tw/articles/10253058)
+- [Shard Management](https://ithelp.ithome.com.tw/articles/10253348)
+
 
 ## References
 - [腾讯万亿级 Elasticsearch 技术解密](https://cloud.tencent.com/developer/article/1598364)
