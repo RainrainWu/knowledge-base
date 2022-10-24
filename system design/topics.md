@@ -1,2 +1,0 @@
-# Misc
-- Data Saver Mode
