@@ -37,14 +37,21 @@
 **References**
 - [Cache warming: Agility for a stateful service](https://netflixtechblog.com/cache-warming-agility-for-a-stateful-service-2d3b1da82642)
 
+## Eviction & TTL
+- User can specify TTL (time-to-live) for each key which indicates the expired timing, and the key will never expired if TTL is not set.
+
+- An eviction policy is still necessary to mitigate out-of-space issues, several well known strategies like LRU and random pick are supported.
+
 ## Performance Tuning
 
 ### Benchmarking
 - Launch another redis instance with the same device resource, it can help us clarify whether the performance is limited by resources or it actually act slower (>2x resp time).
+
 - Check max latency within given period.
     ```
     redis-cli -h 127.0.0.1 -p 6379 --intrinsic-latency 60
     ```
+
 - Check the min, max, and avg latency with fixed sampling interval.
     ```
     $ redis-cli -h 127.0.0.1 -p 6379 --latency-history -i 1
@@ -59,6 +66,7 @@ $ CONFIG SET slowlog-max-len 500
 
 ### Terrible Time Complexity of the Commands
 - Avoid using the commands with complexity greater than O(N) (e.g. SORT, SUNION), which will occupy too much CPU resource.
+
 - Huge N for command with O(N) complexity, which will spend lots of time on network transfer and leads to high network I/O.
 
 ### Big Key
@@ -75,6 +83,11 @@ Scan the big keys.
     lazyfree-lazy-user-del = yes
     ```
 
+### Penetration
+- A large amount of request ask for keys not available within redis in a short time, which leads to heavy workload on databases behind.
+  - Throttle the traffic against databases behind.
+  - Refresh the data within redis asynchronously through background tasks.
+
 ### Avalanche
 - Redis has two evection policy.
     - Passive eviction Evict only when the key is visited.
@@ -86,11 +99,14 @@ Scan the big keys.
 
 ### Max Memory
 - Max memory can be specified through maxmemory configuration, and Redis have to evict several keys before write-related operation if the memory occupation hit the upper bound.
+
 - `allkeys-lru` & `volatile-lru` are common eviction policy, while `allkeys-random` & `volatile-random` brings us better performance but may reduce the hit rate.
 
 ### Fork
 - Persistent storage & synchronization mechanism will fork from main process, which may share significant resource if the data is high.
+
 - Delegate the persistent storage tasks to slave node and schedule on non-peak hours.
+
 - Increase the value of `repl-backlog-size` to achieve less overall synchronization.
 
 ### Turn off Transparent Huge Page
@@ -114,10 +130,12 @@ $ echo never > /sys/kernel/mm/transparent_hugepage/enabled
 
 ### Heavy Swap
 - If the memory is not enough for use, disk will be utilized for swap mechanism.
+
+
 - Fortunately, it can be mitigated directly through add more memory resource.
-```
-$ cat /proc/$pid/smaps | egrep '^(Swap|Size)'
-```
+    ```
+    $ cat /proc/$pid/smaps | egrep '^(Swap|Size)'
+    ```
 
 ### Defragmentation
 - Higher fragmentation ratio (the value of mem_fragmentation_ratio within output of INFO command) stands for worse memory utilization and have to be tidied up.
