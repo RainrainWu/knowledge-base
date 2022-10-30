@@ -1,5 +1,29 @@
 # Redis
 
+- [Redis](#redis)
+  - [Features](#features)
+  - [Memory Optimization](#memory-optimization)
+  - [Persistent Layer](#persistent-layer)
+    - [Snapshot](#snapshot)
+    - [Operation Log](#operation-log)
+  - [Clustering](#clustering)
+  - [Cache Warming](#cache-warming)
+  - [Eviction & TTL](#eviction--ttl)
+  - [Performance Tuning](#performance-tuning)
+    - [Benchmarking](#benchmarking)
+    - [Slow Log](#slow-log)
+    - [Terrible Time Complexity of the Commands](#terrible-time-complexity-of-the-commands)
+    - [Big Key](#big-key)
+    - [Penetration](#penetration)
+    - [Avalanche](#avalanche)
+    - [Max Memory](#max-memory)
+    - [Fork](#fork)
+    - [Turn off Transparent Huge Page](#turn-off-transparent-huge-page)
+    - [Switch Append Only File (AOF)](#switch-append-only-file-aof)
+    - [CPU Binding](#cpu-binding)
+    - [Heavy Swap](#heavy-swap)
+    - [Defragmentation](#defragmentation)
+
 ## Features
 - In-memory key-value pairs storage.
 - Rich data type (e.g. array, set, hashmap).
