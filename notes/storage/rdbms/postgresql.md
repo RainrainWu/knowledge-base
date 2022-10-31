@@ -18,7 +18,7 @@
 - Based on multi-way balanced search tree which support general comparison (e.g. `>=`, `<`, ...).
 - [PostgreSQL Official Documents](https://www.postgresql.org/docs/current/btree-intro.html)
 
-**GiST**
+**Generalized Search Tree (GiST)**
 - Also a kind of balanced search tree but allows more flexible data type and compare methods (e.g. geometry overlap, distance based on latitude and longitude).
 - [PostgreSQL Official Document](https://www.postgresql.org/docs/current/gist-intro.html)
 
@@ -29,7 +29,7 @@
 - Most of the data here can lead to unbalance tree easily, which is not friendly to GiST.
 - [PostgreSQL Official Document](https://www.postgresql.org/docs/current/spgist-intro.html)
 
-**GIN**
+**Generalized Inverted Index (GIN)**
 - Focus on searching desired items which contained inside large composited value (e.g. JSON, array, text, ...).
 - [PostgreSQL Official Document](https://www.postgresql.org/docs/current/gin-builtin-opclasses.html)
 
